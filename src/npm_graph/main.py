@@ -1,22 +1,21 @@
-"""Stage 2: display direct runtime dependencies from npm."""
+"""Stage 3: recursively build dependency graphs from npm or test JSON."""
 
 import sys
 
 from .config import parse_args
+from .fixtures import TestRepository
+from .graph import build_graph, graph_lines
 from .registry import NpmRepository
 
 
 def main(argv=None):
-    """Print direct dependencies, reporting source failures in stderr."""
+    """Display graph edges and report failures without a traceback."""
     args = parse_args(argv)
     try:
-        if args.test_mode:
-            raise ValueError('test graph mode is introduced in stage 3')
-        dependencies = NpmRepository(args.repository).dependencies(args.package)
-        for name, version in dependencies.items():
-            print(f'{name} {version}')
-        if not dependencies:
-            print('(no direct dependencies)')
+        source_type = TestRepository if args.test_mode else NpmRepository
+        source = source_type(args.repository)
+        graph = build_graph(source, args.package, args.max_depth, args.exclude)
+        print('\n'.join(graph_lines(graph)))
     except (OSError, ValueError) as error:
         print(f'Error: {error}', file=sys.stderr)
         return 1

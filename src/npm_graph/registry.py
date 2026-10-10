@@ -46,3 +46,8 @@ class NpmRepository:
             except (OSError, ValueError) as error:
                 raise ValueError(f'Cannot read {name}: {error}') from error
         return dict(self.cache[name])
+
+    def validate_root(self, name):
+        """Check name syntax without fetching beyond a depth-zero boundary."""
+        if not npm_name.fullmatch(name):
+            raise ValueError('invalid npm package name')
