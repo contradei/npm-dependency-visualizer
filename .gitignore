@@ -1,0 +1,14 @@
+.venv/
+.idea/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.superpowers/
+build/
+dist/
+*.egg-info/
+node_modules/
+tools/
+generated/
+graph.svg
+graph.d2
