@@ -66,12 +66,48 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(parse_args(['--package', '@types/node']).package,
                          '@types/node')
 
-    def test_order_output(self):
-        """Stage four prints dependencies before their parent."""
+    def test_missing_option_values(self):
+        """Value-taking options all reject absent arguments."""
+        for option in ('--package', '--repository', '--output',
+                       '--max-depth', '--exclude'):
+            with self.subTest(option=option):
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as caught:
+                        parse_args(['--package', 'is-odd', option])
+                self.assertEqual(caught.exception.code, 2)
+
+    def test_output_cannot_replace_input(self):
+        """Both SVG and D2 paths are protected from input collisions."""
+        with tempfile.TemporaryDirectory() as folder:
+            for suffix in ('.svg', '.d2'):
+                source = Path(folder) / ('graph' + suffix)
+                source.write_text('{"A": []}', encoding='utf-8')
+                output = source.with_suffix('.svg')
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit):
+                        parse_args(['--package', 'A', '--test-mode',
+                                    '--repository', str(source),
+                                    '--output', str(output)])
+
+    def test_runtime_error_is_clean(self):
+        """Report registry errors with exit code one and no traceback."""
+        output = io.StringIO()
+        with patch('src.npm_graph.registry.NpmRepository.dependencies',
+                   side_effect=ValueError('offline')):
+            with contextlib.redirect_stderr(output):
+                result = main(['--package', 'is-odd'])
+        self.assertEqual(result, 1)
+        self.assertEqual(output.getvalue(), 'Error: offline\n')
+
+    def test_final_output(self):
+        """Stage five renders SVG and prints the optional ASCII tree."""
         output = io.StringIO()
         with patch('src.npm_graph.registry.NpmRepository.dependencies',
                    return_value={'is-number': '^6.0.0'}):
-            with contextlib.redirect_stdout(output):
-                result = main(['--package', 'is-odd', '--max-depth', '1'])
+            with patch('src.npm_graph.main.render_svg') as render:
+                with contextlib.redirect_stdout(output):
+                    result = main(['--package', 'is-odd', '--max-depth', '1',
+                                   '--ascii'])
         self.assertEqual(result, 0)
-        self.assertIn('is-number -> is-odd', output.getvalue())
+        self.assertIn('`-- is-number', output.getvalue())
+        render.assert_called_once()

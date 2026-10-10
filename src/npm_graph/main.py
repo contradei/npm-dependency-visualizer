@@ -1,24 +1,25 @@
-"""Stage 4: display dependency-first loading order."""
+"""Stage 5: render npm or test dependency graphs as D2, SVG and ASCII."""
 
 import sys
 
 from .config import parse_args
 from .fixtures import TestRepository
-from .graph import build_graph, load_order
+from .graph import build_graph
 from .registry import NpmRepository
+from .render import ascii_tree, render_svg
 
 
 def main(argv=None):
-    """Display DFS completion order and identify cycles explicitly."""
+    """Save a diagram and optionally display its ASCII representation."""
     args = parse_args(argv)
     try:
         source_type = TestRepository if args.test_mode else NpmRepository
         source = source_type(args.repository)
         graph = build_graph(source, args.package, args.max_depth, args.exclude)
-        order, cyclic = load_order(graph)
-        if cyclic:
-            print('Cycle: no strict loading order; DFS completion order:')
-        print(' -> '.join(order))
+        render_svg(graph, args.output)
+        print(f'SVG: {args.output}')
+        if args.ascii:
+            print(ascii_tree(graph, args.package))
     except (OSError, ValueError) as error:
         print(f'Error: {error}', file=sys.stderr)
         return 1

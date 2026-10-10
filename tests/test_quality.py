@@ -65,7 +65,7 @@ class TestQuality(unittest.TestCase):
     def test_text_sizes(self):
         """Демонстрационные файлы и README тоже укладываются в лимиты."""
         paths = [Path("README.md"), Path("run.bat"), Path(".gitignore")]
-        for folder in ("scripts", "vfs"):
+        for folder in ("examples", "docs"):
             paths.extend(path for path in Path(folder).glob("*")
                          if path.is_file())
         for path in paths:

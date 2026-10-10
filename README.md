@@ -1,20 +1,26 @@
 # Граф зависимостей npm
 
 Практическая работа 2, вариант 9. Python 3.12+, Windows/PyCharm.
-Этап 4: рекурсивный DFS строит граф и выводит порядок загрузки зависимостей.
+Этап 5: рекурсивный DFS строит граф зависимостей, D2 сохраняет изображение SVG.
+По флагу `--ascii` граф также выводится в терминал в виде ASCII-дерева.
 Внешних Python-зависимостей нет; сборка не требуется.
 
 ## Запуск и тесты
 
 ```console
 python -m venv .venv
-run.bat --package is-odd
+run.bat --package is-odd --ascii
 .venv\Scripts\python -m unittest discover -s tests -v
 ```
 
 В PyCharm откройте папку проекта и выберите `.venv\Scripts\python.exe`.
 Модуль для запуска: `src.npm_graph.main`, параметры: `--package is-odd`.
 Рабочая папка — корень проекта.
+
+Для изображений нужен [D2](https://d2lang.com/tour/install/) (проверено с 0.9.0).
+Поместите `d2.exe` в локальную папку `tools` или добавьте D2 в PATH.
+На этом компьютере D2 уже установлен в `tools/d2.exe` данного проекта.
+D2 только рисует граф: получение зависимостей выполняет наш Python-код.
 
 ## Настройки
 
@@ -28,7 +34,8 @@ run.bat --package is-odd
 | `--max-depth` | Глубина 0..200, по умолчанию 5; корень имеет глубину 0 |
 | `--exclude` | Регистрозависимая подстрока исключения, по умолчанию пустая |
 
-На этапе 4 параметры визуализации только проверяются; выводится порядок загрузки.
+SVG сохраняется в выбранный файл, рядом записывается одноимённый `.d2`.
+Сначала D2 работает во временной папке; при его ошибке прежний SVG сохраняется.
 Фильтр, совпадающий с корнем, отвергается. Выход не может затереть тестовый вход.
 Ошибки параметров печатаются в stderr, код завершения 2.
 Примеры ошибок: `--max-depth -1`, `--output a.png`, `--ascii false`,
@@ -38,7 +45,7 @@ run.bat --package is-odd
 
 `config.parse_args` разбирает семь опций, `depth_value` проверяет глубину,
 `validate_repository` проверяет источник, `validate_settings` — остальные поля.
-`main.main` выводит порядок загрузки; `NpmRepository.dependencies` получает
+`main.main` запускает анализ и визуализацию; `NpmRepository.dependencies` получает
 `GET /<package>/latest` стандартными `urllib` и `json`, кодируя scoped-имена.
 `extract_dependencies` проверяет структуру метаданных. Повторные запросы кешируются.
 Ошибки HTTP, тайм-ауты и неверный JSON дают сообщение в stderr и код 1.
@@ -47,9 +54,10 @@ run.bat --package is-odd
 но приложение не выполняет npm-разрешение версий и установку пакетов.
 
 ```console
-run.bat --package is-odd
-run.bat --package is-even
-run.bat --package ansi-styles
+mkdir generated
+run.bat --package is-odd --ascii --output generated/is-odd.svg
+run.bat --package is-even --ascii --output generated/is-even.svg
+run.bat --package ansi-styles --ascii --output generated/ansi-styles.svg
 ```
 
 Формат данных: https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md
@@ -60,14 +68,14 @@ JSON — объект вида `{"A": ["B"], "B": []}`. Все вершины д
 имена содержат только A-Z. Неверный JSON и неизвестные ссылки дают ошибку.
 
 ```console
-run.bat --package A --test-mode --repository examples/chain.json --max-depth 2
-run.bat --package A --test-mode --repository examples/diamond.json --max-depth 3
-run.bat --package A --test-mode --repository examples/cycle.json
-run.bat --package A --test-mode --repository examples/chain.json --exclude B
-run.bat --package A --test-mode --repository examples/empty.json
+run.bat --package A --test-mode --repository examples/chain.json --max-depth 2 --ascii
+run.bat --package A --test-mode --repository examples/diamond.json --max-depth 3 --ascii
+run.bat --package A --test-mode --repository examples/cycle.json --ascii
+run.bat --package A --test-mode --repository examples/chain.json --exclude B --ascii
+run.bat --package A --test-mode --repository examples/empty.json --ascii
 ```
 
-Ожидается: C -> B -> A; F -> E -> D -> C -> B -> A; предупреждение о цикле;
+Ожидается: A -> B -> C; ромб с достижимым F; цикл с пометкой `[cycle]`;
 после исключения B — только A; для пустого графа зависимостей — только A.
 `TestRepository` читает JSON, `validate_nodes` проверяет весь документ.
 `build_graph` использует именно рекурсивный DFS; `graph_lines` выводит рёбра.
@@ -78,7 +86,29 @@ run.bat --package A --test-mode --repository examples/empty.json
 Фильтр удаляет совпадающие вершины и пути через них; сравнение регистрозависимое.
 
 `load_order` выполняет DFS postorder: зависимости предшествуют зависимому пакету,
-общие вершины выводятся один раз. Для цикла выводится предупреждение и порядок
-завершения DFS, который **не является** топологическим порядком.
+общие вершины выводятся один раз. Эта функция использовалась в CLI этапа 4.
+При цикле функция возвращает отметку и порядок завершения DFS,
+который **не является** топологическим порядком.
 Обход соседей лексикографический, поэтому результат воспроизводим.
 Сравнение с настоящим npm и команды повторения: [docs/comparison.md](docs/comparison.md).
+
+`to_d2` создаёт стабильные идентификаторы и экранирует подписи.
+`ascii_tree` отмечает циклы как `[cycle]`, общие подграфы как `[shared]`.
+`find_d2` находит программу, `run_renderer` проверяет результат и тайм-аут,
+`render_svg` сохраняет D2/SVG. Отсутствие D2 и ошибки записи дают код 1.
+Сгенерированные файлы, окружение и настройки PyCharm исключены из Git.
+Для чистого клона необходимо самостоятельно установить Python и D2.
+
+## Этапы в истории
+
+1. `feat(stage1)` — семь опций, проверка ошибок, вывод ключ=значение.
+2. `feat(stage2)` — прямые зависимости npm через HTTP.
+3. `feat(stage3)` — рекурсивный DFS, глубина, фильтр, циклы, тестовые JSON.
+4. `feat(stage4)` — порядок загрузки, сравнение с реальным npm.
+5. `feat(stage5)` — D2, SVG, ASCII, три примера и сравнение деревьев.
+
+Каждый этап содержит свои тесты. Для изучения старого этапа используйте отдельную
+папку `git worktree add --detach ../npm-stage3 16f8fa0`, затем запустите тесты
+и программу из неё. Ваш основной проект останется на финальном этапе.
+Общие ограничения методички проверяются `tests/test_quality.py`.
+Дополнительно код проверен flake8/pep8-naming и radon: сложность функций <=10.
