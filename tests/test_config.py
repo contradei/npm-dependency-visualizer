@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from src.npm_graph.config import parse_args
 from src.npm_graph.main import main
@@ -65,11 +66,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(parse_args(['--package', '@types/node']).package,
                          '@types/node')
 
-    def test_prototype_output(self):
-        """Stage one prints every setting as key=value."""
+    def test_direct_output(self):
+        """Stage two prints dependency names and their declared ranges."""
         output = io.StringIO()
-        with contextlib.redirect_stdout(output):
-            result = main(['--package', 'is-odd'])
+        with patch('src.npm_graph.registry.NpmRepository.dependencies',
+                   return_value={'is-number': '^6.0.0'}):
+            with contextlib.redirect_stdout(output):
+                result = main(['--package', 'is-odd'])
         self.assertEqual(result, 0)
-        self.assertEqual(len(output.getvalue().splitlines()), 7)
-        self.assertIn('package=is-odd', output.getvalue())
+        self.assertIn('is-number ^6.0.0', output.getvalue())
