@@ -43,21 +43,18 @@ def load_order(graph):
     order = []
     cyclic = False
 
-    def finish(name):
-        """Append a vertex only after all of its unvisited dependencies."""
-        nonlocal cyclic
-        if name in active:
+    stack = [(name, False) for name in reversed(sorted(graph))]
+    while stack:
+        name, exiting = stack.pop()
+        if exiting:
+            active.remove(name)
+            done.add(name)
+            order.append(name)
+        elif name in active:
             cyclic = True
-            return
-        if name in done:
-            return
-        active.add(name)
-        for child in sorted(graph[name]):
-            finish(child)
-        active.remove(name)
-        done.add(name)
-        order.append(name)
-
-    for name in sorted(graph):
-        finish(name)
+        elif name not in done:
+            active.add(name)
+            stack.append((name, True))
+            stack.extend((child, False)
+                         for child in reversed(sorted(graph[name])))
     return order, cyclic

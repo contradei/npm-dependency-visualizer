@@ -28,3 +28,13 @@ class TestOrder(unittest.TestCase):
     def test_isolated_nodes(self):
         """Handle standalone vertices deterministically."""
         self.assertEqual(load_order({'B': [], 'A': []}), (['A', 'B'], False))
+
+    def test_long_path_with_short_root_distances(self):
+        """Depth two can still produce paths exceeding the recursion limit."""
+        names = [f'node_{index}' for index in range(1200)]
+        graph = {name: [child] for name, child in zip(names, names[1:])}
+        graph[names[-1]] = []
+        graph['root'] = names
+        order, cyclic = load_order(graph)
+        self.assertFalse(cyclic)
+        self.assertEqual(order, list(reversed(names)) + ['root'])
