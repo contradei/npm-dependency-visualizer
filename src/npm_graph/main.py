@@ -1,12 +1,21 @@
 """Stage 5: render npm or test dependency graphs as D2, SVG and ASCII."""
 
+from pathlib import Path
 import sys
 
-from .config import parse_args
-from .fixtures import TestRepository
-from .graph import build_graph
-from .registry import NpmRepository
-from .render import ascii_tree, render_svg
+if __package__:
+    from .config import parse_args
+    from .fixtures import TestRepository
+    from .graph import build_graph
+    from .registry import NpmRepository
+    from .render import ascii_tree, render_svg
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.npm_graph.config import parse_args
+    from src.npm_graph.fixtures import TestRepository
+    from src.npm_graph.graph import build_graph
+    from src.npm_graph.registry import NpmRepository
+    from src.npm_graph.render import ascii_tree, render_svg
 
 
 def main(argv=None):

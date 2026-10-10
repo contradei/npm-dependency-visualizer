@@ -17,6 +17,12 @@ run.bat --package is-odd --ascii
 Модуль для запуска: `src.npm_graph.main`, параметры: `--package is-odd`.
 Рабочая папка — корень проекта.
 
+Поддерживается и прямой запуск файла:
+`python src/npm_graph/main.py --package is-even --ascii`.
+В PyCharm выберите конфигурацию `npm graph - variant 9` и нажмите ▶.
+При запуске через «Current File» обязательно добавьте `--package is-even --ascii`
+в поле Parameters: без имени пакета программа покажет справку об ошибке ввода.
+
 Для изображений нужен [D2](https://d2lang.com/tour/install/) (проверено с 0.9.0).
 Поместите `d2.exe` в локальную папку `tools` или добавьте D2 в PATH.
 На этом компьютере D2 уже установлен в `tools/d2.exe` данного проекта.
