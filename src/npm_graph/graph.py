@@ -34,3 +34,30 @@ def graph_lines(graph):
             yield name
         for child in graph[name]:
             yield f'{name} -> {child}'
+
+
+def load_order(graph):
+    """Return DFS postorder and whether a strict topological order is absent."""
+    active = set()
+    done = set()
+    order = []
+    cyclic = False
+
+    def finish(name):
+        """Append a vertex only after all of its unvisited dependencies."""
+        nonlocal cyclic
+        if name in active:
+            cyclic = True
+            return
+        if name in done:
+            return
+        active.add(name)
+        for child in sorted(graph[name]):
+            finish(child)
+        active.remove(name)
+        done.add(name)
+        order.append(name)
+
+    for name in sorted(graph):
+        finish(name)
+    return order, cyclic

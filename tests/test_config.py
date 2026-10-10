@@ -66,12 +66,12 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(parse_args(['--package', '@types/node']).package,
                          '@types/node')
 
-    def test_graph_output(self):
-        """Stage three prints directed graph edges."""
+    def test_order_output(self):
+        """Stage four prints dependencies before their parent."""
         output = io.StringIO()
         with patch('src.npm_graph.registry.NpmRepository.dependencies',
                    return_value={'is-number': '^6.0.0'}):
             with contextlib.redirect_stdout(output):
                 result = main(['--package', 'is-odd', '--max-depth', '1'])
         self.assertEqual(result, 0)
-        self.assertIn('is-odd -> is-number', output.getvalue())
+        self.assertIn('is-number -> is-odd', output.getvalue())
